@@ -20,11 +20,11 @@
 defined('ABSPATH') or die('no wordpress path found');
 
 
+/* PLUG ACTIVATION */
 function myplugin_activate() {
-    // register taxonomies/post types here
+    
 
-
-    // echo 'table creation';
+    //  'table creation';
         function create_plugin_database_table()
     {
          
@@ -46,22 +46,32 @@ function myplugin_activate() {
 
 
     }
-    // echo 'END table creation';
+    
+
+
     create_plugin_database_table();
     register_activation_hook( __FILE__, 'create_plugin_database_table' );
+
+    // 'END table creation';
 
     flush_rewrite_rules();
 }
 
 register_activation_hook( __FILE__, 'myplugin_activate' );
 
+/* END PLUG ACTIVATION */
+
+
+/* PLUG DEACTIVATION */
 function myplugin_deactivate() {
     flush_rewrite_rules();
 }
+
 register_deactivation_hook( __FILE__, 'myplugin_deactivate' );
+/* END PLUG DEACTIVATION */
 
 
-
+/* PLUG UNINSTALL */
 register_uninstall_hook( __FILE__, 'myplugin_uninstall' );
 function myplugin_uninstall() {
      global $wpdb;
@@ -69,6 +79,11 @@ function myplugin_uninstall() {
     $wpdb->query( "DROP TABLE IF EXISTS ".$table_name.';' );
     delete_option( 'my_plugin_option' );
 }
+
+/* END PLUG UNINSTALL */
+
+
+/* ADMIN PAGE */
 
 add_action('admin_menu', 'test_plugin_setup_menu');
  
@@ -81,6 +96,10 @@ function test_init(){
         <div class='login_admin_shrtc_color'>[logn_form]</div>";
 }
 
+/* END ADMIN PAGE */
+
+
+/* SCRIPTS FOR ADMIN PAGE */
 
 add_action( 'admin_enqueue_scripts', 'load_custom_wp_admin_style' );
 function load_custom_wp_admin_style($hook) {
@@ -93,7 +112,9 @@ function load_custom_wp_admin_style($hook) {
         } else {
             wp_enqueue_style('login_wp_plugin_css', plugins_url('public/css/admin_submenu.css',__FILE__ ));
         }
+
 }
+/* END SCRIPTS FOR ADMIN PAGE */
         
 
 
@@ -103,12 +124,15 @@ function load_custom_wp_admin_style($hook) {
 function get_tiny_form_login($redirect=false) {
   global $tiny_form_count;
   ++$tiny_form_count;
+  
   if (is_user_logged_in()) :
     $return = "<form action=\"\" method=\"post\" class=\"tiny_form tiny_form_login\">\r\n";
     $error = get_tiny_error($tiny_form_count);
+
     if ($error)
       $return .= "<p class=\"error\">{$error}</p>\r\n";
     $success = get_tiny_success($tiny_form_count);
+    
     if ($success)
       $return .= "<p class=\"success\">{$success}</p>\r\n";
 
@@ -144,6 +168,7 @@ function get_tiny_form_login($redirect=false) {
 function the_tiny_form_login($redirect=false) {
   echo get_tiny_form_login($redirect);
 }
+
 // shortcode for form #1
 // usage: [tiny_form_login] in post/page content
 
@@ -158,13 +183,16 @@ function tiny_form_login_shortcode ($atts,$content=false) {
 
 
  
-// <============== FORM LOGIN
+// <============== END LOGIN FORM
 
  
 // ============ FORM SUBMISSION HANDLER
+
 add_action('init','tiny_handle');
+
 function tiny_handle() {
-$success = false;
+  
+  $success = false;
 
   if (isset($_REQUEST['tiny_action'])) {
 
@@ -177,21 +205,18 @@ $success = false;
         } else {
           
 
+       // ================= BLOCKING IP CHECKING
+
       $ip = $_SERVER['REMOTE_ADDR'];       
       $date = new DateTime(date("Y-m-d H:i:s"));
       $fdate = $date->format('Y-m-d H:i:s');
-      global $wpdb;      
-      
-      $result = $wpdb->get_row("SELECT * FROM wp_LoginAttempts WHERE IP LIKE '$ip';");      
-      
+      global $wpdb;
+      $result = $wpdb->get_row("SELECT * FROM wp_LoginAttempts WHERE IP LIKE '$ip';");
       $blocked = 1;
 
       if($result->Attempts!==null){
         
         $number=(($result)->Attempts);
-
-        
-        // ================= BLOCKING IP
 
         if($number>2){
           
@@ -210,6 +235,8 @@ $success = false;
             $min= $timesplit[0]*60+$timesplit[1];
 
 
+            /* IF BLOCKED TIME > 30 MINUTES */
+
             if($min>29){
               $sql= "DELETE FROM `wp_LoginAttempts` WHERE IP = '$ip';";
               $wpdb->query($sql);
@@ -219,15 +246,14 @@ $success = false;
               set_tiny_error(__('<strong>ERROR</strong>: Too much attempts, please wait '.$min.' minutes','tiny_login'),$_REQUEST['tiny_form']);
             }
 
+        }
 
-
-          }
+          /* IF BLOCK EXIST UPDATE ROW IN DATABASE */
 
           if($blocked==1){
             $number++;
             $sql="UPDATE wp_LoginAttempts SET Attempts = '$number'
   WHERE IP = '$ip';";
-  
             $wpdb->query($sql);            
 
           }
@@ -236,6 +262,7 @@ $success = false;
 
         }else{
           
+          /* IF BLOCK DOESN'T EXIST CREATE ROW IN DATABASE */
 
           $sql = "INSERT INTO wp_LoginAttempts (Ip,Attempts,LastLogin) VALUES ('$ip', 1,'$fdate');";
 
@@ -243,6 +270,7 @@ $success = false;
         }
 
 
+        /* CALL TO REMOTE SERVER */
 
         $creds = array();
         $creds['user_login'] = $_POST['tiny_username'];
@@ -302,42 +330,42 @@ $success = false;
 
 
 
-        // ================= UTILITIES
+// ================= UTILITIES
 
-        if (!function_exists('set_tiny_error')) {
-          function set_tiny_error($error,$id=0) {
-            $_SESSION['tiny_error_'.$id] = $error;
-          }
-        }
-        // shows error message
-        if (!function_exists('the_tiny_error')) {
-          function the_tiny_error($id=0) {
-            echo get_tiny_error($id);
-          }
-        }
-         
-        if (!function_exists('get_tiny_error')) {
-          function get_tiny_error($id=0) {
-            if ($_SESSION['tiny_error_'.$id]) {
-              $return = $_SESSION['tiny_error_'.$id];
-              unset($_SESSION['tiny_error_'.$id]);
-              return $return;
-            } else {
-              return false;
-            }
-          }
-        }
-        
-        if (!function_exists('set_tiny_success')) {
-          function set_tiny_success($error,$id=0) {
-            $_SESSION['tiny_success_'.$id] = $error;
-          }
-        }
-        if (!function_exists('the_tiny_success')) {
-          function the_tiny_success($id=0) {
-            echo get_tiny_success($id);
-          }
-        }
+if (!function_exists('set_tiny_error')) {
+  function set_tiny_error($error,$id=0) {
+    $_SESSION['tiny_error_'.$id] = $error;
+  }
+}
+// shows error message
+if (!function_exists('the_tiny_error')) {
+  function the_tiny_error($id=0) {
+    echo get_tiny_error($id);
+  }
+}
+ 
+if (!function_exists('get_tiny_error')) {
+  function get_tiny_error($id=0) {
+    if ($_SESSION['tiny_error_'.$id]) {
+      $return = $_SESSION['tiny_error_'.$id];
+      unset($_SESSION['tiny_error_'.$id]);
+      return $return;
+    } else {
+      return false;
+    }
+  }
+}
+
+if (!function_exists('set_tiny_success')) {
+  function set_tiny_success($error,$id=0) {
+    $_SESSION['tiny_success_'.$id] = $error;
+  }
+}
+if (!function_exists('the_tiny_success')) {
+  function the_tiny_success($id=0) {
+    echo get_tiny_success($id);
+  }
+}
  
 if (!function_exists('get_tiny_success')) {
   function get_tiny_success($id=0) {
